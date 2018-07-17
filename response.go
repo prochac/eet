@@ -2,6 +2,7 @@ package goEET
 
 import (
 	"encoding/xml"
+	"time"
 
 	"github.com/astaxie/beego/logs"
 	"github.com/prochac/goEET/odpoved"
@@ -9,6 +10,7 @@ import (
 
 type Response struct {
 	odpoved odpoved.Odpoved
+	DatPrij time.Time
 	Fik     string
 	Bkp     string
 }
@@ -34,8 +36,9 @@ func parseResponseFromWsseResponse(rawResponse []byte) (*Response, error) {
 	}
 
 	resp := Response{
-		Fik: o.Potvrzeni.Fik,
-		Bkp: o.Hlavicka.Bkp,
+		DatPrij: o.Hlavicka.DatPrij,
+		Fik:     o.Potvrzeni.Fik,
+		Bkp:     o.Hlavicka.Bkp,
 	}
 	return &resp, nil
 }

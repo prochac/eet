@@ -5,7 +5,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
-
 	"fmt"
 
 	"io/ioutil"
@@ -15,7 +14,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 
-	"golang.org/x/crypto/pkcs12"
+	"github.com/prochac/crypto/pkcs12"
 )
 
 type Signer struct {
@@ -74,24 +73,37 @@ func (s *Signer) LoadPrivateKey(keyPath string) (err error) {
 	return nil
 }
 
-func NewSigner(pkcsPath string, password string) (s *Signer, err error) {
-	pemBytes, err := ioutil.ReadFile(pkcsPath)
+func NewSigner(certPath string, password string) (s *Signer, err error) {
+	pfxData, err := ioutil.ReadFile(certPath)
 	if err != nil {
 		return nil, err
 	}
 
-	rawKey, cert, err := pkcs12.Decode(pemBytes, password)
+	rawKeys, certs, err := pkcs12.DecodeAll(pfxData, password)
 	if err != nil {
 		return nil, err
 	}
-	key, ok := rawKey.(*rsa.PrivateKey)
-	if !ok {
+
+	signer := Signer{}
+
+	for _, rawKey := range rawKeys {
+		if key, ok := rawKey.(*rsa.PrivateKey); ok {
+			signer.key = key
+			break
+		}
+	}
+	if signer.key == nil {
 		return nil, errors.New("can't load private key")
 	}
 
-	signer := Signer{
-		cert: cert,
-		key:  key,
+	for _, cert := range certs {
+		if !cert.IsCA {
+			signer.cert = cert
+			break
+		}
+	}
+	if signer.cert == nil {
+		return nil, errors.New("can't load certificate")
 	}
 
 	return &signer, nil

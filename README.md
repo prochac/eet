@@ -43,3 +43,9 @@ func main(){
     fmt.Println("Fik: ", response.Fik)
 }
 ```
+
+## Thanks
+
+Thanks for help and inspiration
+ - https://github.com/ondrejnov/eet
+ - https://github.com/v154c1/pyEET

@@ -11,10 +11,7 @@ import (
 )
 
 func TestDispatcher_SendPayment(t *testing.T) {
-	d, err := NewDispatcher(PlaygroundService,
-		"cert_test/EET_CA1_Playground-CZ00000019.key",
-		"cert_test/EET_CA1_Playground-CZ00000019.pem",
-		"")
+	d, err := NewDispatcher(PlaygroundService, "cert_test/EET_CA1_Playground-CZ00000019.p12", "eet")
 	if err != nil {
 		t.Fatal(err)
 		return
