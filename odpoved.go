@@ -1,12 +1,16 @@
-package odpoved
+package goEET
 
 import (
 	"encoding/xml"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
-type SOAPEnvelope struct {
+type SOAPEnvelopeResponse struct {
 	XMLName xml.Name `xml:"Envelope"`
 	Body    struct {
 		XMLName xml.Name `xml:"Body"`
@@ -14,15 +18,28 @@ type SOAPEnvelope struct {
 	}
 }
 
-type Odpoved struct {
-	XMLName   xml.Name   `xml:"Odpoved"`
-	Hlavicka  Hlavicka   `xml:"Hlavicka"`
-	Potvrzeni *Potvrzeni `xml:"Potvrzeni"`
-	Chyba     *Chyba     `xml:"Chyba"`
-	Varovani  []Varovani `xml:"Varovani"`
+func ParseSOAPEnvelopeResponse(r io.Reader) (resp SOAPEnvelopeResponse, err error) {
+	b, err := ioutil.ReadAll(r)
+	if err != nil {
+		return SOAPEnvelopeResponse{}, errors.Wrap(err, "Failed to read all data from reader")
+	}
+
+	if err := xml.Unmarshal(b, &resp); err != nil {
+		return SOAPEnvelopeResponse{}, errors.Wrap(err, "Failed to xml.Unmarshal SOAPEnvelopeResponse")
+	}
+
+	return resp, nil
 }
 
-type Hlavicka struct {
+type Odpoved struct {
+	XMLName   xml.Name        `xml:"Odpoved"`
+	Hlavicka  OdpovedHlavicka `xml:"Hlavicka"`
+	Potvrzeni *Potvrzeni      `xml:"Potvrzeni"`
+	Chyba     *Chyba          `xml:"Chyba"`
+	Varovani  []Varovani      `xml:"Varovani"`
+}
+
+type OdpovedHlavicka struct {
 	XMLName    xml.Name  `xml:"Hlavicka"`
 	UuidZpravy string    `xml:"uuid_zpravy,attr"`
 	DatPrij    time.Time `xml:"dat_prij,attr"`

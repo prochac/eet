@@ -3,8 +3,7 @@ package goEET
 import (
 	"time"
 
-	"github.com/prochac/goEET/signing"
-	"github.com/prochac/goEET/trzba"
+	"github.com/pkg/errors"
 )
 
 type Receipt struct {
@@ -33,81 +32,88 @@ type Receipt struct {
 	Rezim           Regime
 }
 
-func (r Receipt) toTrzba(signer *signing.Signer) (t trzba.Trzba, err error) {
+func (r Receipt) Trzba(signer *Signer) (t Trzba, err error) {
 	// Hlavicka
-	t.Hlavicka.DatOdesl = trzba.NewDateTimeType(time.Now())
-	t.Hlavicka.UuidZpravy, err = trzba.NewUUIDType(r.UuidZpravy)
+	t.Hlavicka.DatOdesl = NewDateTimeType(time.Now())
+	t.Hlavicka.UuidZpravy, err = NewUUIDType(r.UuidZpravy)
 	if err != nil {
-		return
+		return Trzba{}, errors.Wrap(err, "Failed to create UuidZpravy")
 	}
 	t.Hlavicka.PrvniZaslani = r.PrvniZaslani
 	// Data
-	if t.Data.DicPopl, err = trzba.NewCZDICType(r.DicPopl); err != nil {
-		return
+	if t.Data.DicPopl, err = NewCZDICType(r.DicPopl); err != nil {
+		return Trzba{}, errors.Wrap(err, "Failed to create DicPopl")
 	}
-	if t.Data.DicPoverujiciho, err = trzba.NewCZDICType(r.DicPoverujiciho); len(r.DicPoverujiciho) != 0 && err != nil {
-		return
+	if t.Data.DicPoverujiciho, err = NewCZDICType(r.DicPoverujiciho); len(r.DicPoverujiciho) != 0 && err != nil {
+		return Trzba{}, errors.Wrap(err, "Failed to create DicPoverujiciho")
 	}
-	if t.Data.IdProvoz, err = trzba.NewIdProvozType(r.IdProvoz); err != nil {
-		return
+	if t.Data.IdProvoz, err = NewIdProvozType(r.IdProvoz); err != nil {
+		return Trzba{}, errors.Wrap(err, "Failed to create IdProvoz")
 	}
-	if t.Data.IdPokl, err = trzba.NewString20(r.IdPokl); err != nil {
-		return
+	if t.Data.IdPokl, err = NewString20(r.IdPokl); err != nil {
+		return Trzba{}, errors.Wrap(err, "Failed to create IdPokl")
 	}
-	if t.Data.PoradCis, err = trzba.NewString25(r.PoradCis); err != nil {
-		return
+	if t.Data.PoradCis, err = NewString25(r.PoradCis); err != nil {
+		return Trzba{}, errors.Wrap(err, "Failed to create PoradCis")
 	}
-	t.Data.DatTrzby = trzba.NewDateTimeType(r.DatTrzby)
-	if t.Data.CelkTrzba, err = trzba.NewCastkaType(r.CelkTrzba); err != nil {
-		return
+	t.Data.DatTrzby = NewDateTimeType(r.DatTrzby)
+	if t.Data.CelkTrzba, err = NewCastkaType(r.CelkTrzba); err != nil {
+		return Trzba{}, errors.Wrap(err, "Failed to create CelkTrzba")
 	}
-	if t.Data.ZaklNepodlDph, err = trzba.NewCastkaType(r.ZaklNepodlDph); err != nil {
-		return
+	if t.Data.ZaklNepodlDph, err = NewCastkaType(r.ZaklNepodlDph); err != nil {
+		return Trzba{}, errors.Wrap(err, "Failed to create ZaklNepodlDph")
 	}
-	if t.Data.ZaklDan1, err = trzba.NewCastkaType(r.ZaklDan1); err != nil {
-		return
+	if t.Data.ZaklDan1, err = NewCastkaType(r.ZaklDan1); err != nil {
+		return Trzba{}, errors.Wrap(err, "Failed to create ZaklDan1")
 	}
-	if t.Data.Dan1, err = trzba.NewCastkaType(r.Dan1); err != nil {
-		return
+	if t.Data.Dan1, err = NewCastkaType(r.Dan1); err != nil {
+		return Trzba{}, errors.Wrap(err, "Failed to create Dan1")
 	}
-	if t.Data.ZaklDan2, err = trzba.NewCastkaType(r.ZaklDan2); err != nil {
-		return
+	if t.Data.ZaklDan2, err = NewCastkaType(r.ZaklDan2); err != nil {
+		return Trzba{}, errors.Wrap(err, "Failed to create ZaklDan2")
 	}
-	if t.Data.Dan2, err = trzba.NewCastkaType(r.Dan2); err != nil {
-		return
+	if t.Data.Dan2, err = NewCastkaType(r.Dan2); err != nil {
+		return Trzba{}, errors.Wrap(err, "Failed to create Dan2")
 	}
-	if t.Data.ZaklDan3, err = trzba.NewCastkaType(r.ZaklDan3); err != nil {
-		return
+	if t.Data.ZaklDan3, err = NewCastkaType(r.ZaklDan3); err != nil {
+		return Trzba{}, errors.Wrap(err, "Failed to create ZaklDan3")
 	}
-	if t.Data.Dan3, err = trzba.NewCastkaType(r.Dan3); err != nil {
-		return
+	if t.Data.Dan3, err = NewCastkaType(r.Dan3); err != nil {
+		return Trzba{}, errors.Wrap(err, "Failed to create Dan3")
 	}
-	if t.Data.CestSluz, err = trzba.NewCastkaType(r.CestSluz); err != nil {
-		return
+	if t.Data.CestSluz, err = NewCastkaType(r.CestSluz); err != nil {
+		return Trzba{}, errors.Wrap(err, "Failed to create CestSluz")
 	}
-	if t.Data.PouzitZboz1, err = trzba.NewCastkaType(r.PouzitZboz1); err != nil {
-		return
+	if t.Data.PouzitZboz1, err = NewCastkaType(r.PouzitZboz1); err != nil {
+		return Trzba{}, errors.Wrap(err, "Failed to create PouzitZboz1")
 	}
-	if t.Data.PouzitZboz2, err = trzba.NewCastkaType(r.PouzitZboz2); err != nil {
-		return
+	if t.Data.PouzitZboz2, err = NewCastkaType(r.PouzitZboz2); err != nil {
+		return Trzba{}, errors.Wrap(err, "Failed to create PouzitZboz2")
 	}
-	if t.Data.PouzitZboz3, err = trzba.NewCastkaType(r.PouzitZboz3); err != nil {
-		return
+	if t.Data.PouzitZboz3, err = NewCastkaType(r.PouzitZboz3); err != nil {
+		return Trzba{}, errors.Wrap(err, "Failed to create PouzitZboz3")
 	}
-	if t.Data.UrcenoCerpZuct, err = trzba.NewCastkaType(r.UrcenoCerpZuct); err != nil {
-		return
+	if t.Data.UrcenoCerpZuct, err = NewCastkaType(r.UrcenoCerpZuct); err != nil {
+		return Trzba{}, errors.Wrap(err, "Failed to create UrcenoCerpZuct")
 	}
-	if t.Data.CerpZuct, err = trzba.NewCastkaType(r.CerpZuct); err != nil {
-		return
+	if t.Data.CerpZuct, err = NewCastkaType(r.CerpZuct); err != nil {
+		return Trzba{}, errors.Wrap(err, "Failed to create CerpZuct")
 	}
-	if r.Rezim == RegularRegime {
-		t.Data.Rezim = trzba.BeznyRezim
-	} else if r.Rezim == SimplifiedRegime {
-		t.Data.Rezim = trzba.ZjednodusenyRezim
+	if r.Rezim == SimplifiedRegime {
+		t.Data.Rezim = ZjednodusenyRezim
 	}
 	// KontrolniKody
-	t.KontrolniKody.Pkp = trzba.NewPkp(t, signer)
-	t.KontrolniKody.Bkp = trzba.NewBkp(t.KontrolniKody.Pkp)
+	pkp, err := NewPkp(t, signer)
+	if err != nil {
+		return Trzba{}, errors.Wrap(err, "Failed to create PKP")
+	}
+	t.KontrolniKody.Pkp = pkp
+
+	bkp, err := NewBkp(t.KontrolniKody.Pkp)
+	if err != nil {
+		return Trzba{}, errors.Wrap(err, "Failed to create BKP")
+	}
+	t.KontrolniKody.Bkp = bkp
 
 	return t, nil
 }

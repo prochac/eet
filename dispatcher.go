@@ -2,14 +2,10 @@ package goEET
 
 import (
 	"bytes"
-	"encoding/xml"
-	"io/ioutil"
+	"crypto/x509"
 	"net/http"
 
-	"crypto/x509"
-
-	"github.com/prochac/goEET/signing"
-	"github.com/prochac/goEET/wsse"
+	"github.com/pkg/errors"
 )
 
 type Service string
@@ -32,43 +28,64 @@ const (
 
 type Dispatcher struct {
 	service     Service
-	signer      *signing.Signer
+	signer      *Signer
 	certificate *x509.Certificate
 	testing     bool
 }
 
 func NewDispatcher(service Service, certPath, password string) (eet *Dispatcher, err error) {
-	d := Dispatcher{service: service}
-	d.signer, err = signing.NewSigner(certPath, password)
+	signer, err := NewSigner(certPath, password)
+	if err != nil {
+		return &Dispatcher{}, errors.Wrap(err, "Failed to create signer")
+	}
 
-	return &d, err
+	d := Dispatcher{
+		service: service,
+		signer:  signer,
+	}
+
+	return &d, nil
 }
 
 func (d *Dispatcher) SendPayment(receipt Receipt) (r *Response, err error) {
-	trzba, err := receipt.toTrzba(d.signer)
+	trzba, err := receipt.Trzba(d.signer)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to convert Receipt to Trzba")
 	}
 
-	envelope := wsse.NewSOAPEnvelope(trzba, d.signer)
-
-	b, err := xml.Marshal(envelope)
+	envelope, err := NewSOAPEnvelopeRequest(trzba, d.signer)
 	if err != nil {
-		panic(err)
+		return nil, errors.Wrap(err, "Failed to create SOAPEnvelopeRequest")
 	}
-	xmlHeader := `<?xml version="1.0" encoding="UTF-8"?>`
-	buf := bytes.NewBuffer([]byte(xmlHeader + string(b)))
 
+	b, err := envelope.Marshal()
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to marshal SOAPEnvelopeRequest")
+	}
+
+	buf := bytes.NewBuffer(b)
 	resp, err := http.Post(d.service.ToString(), "application/xml", buf)
 	if err != nil {
-		panic(err)
+		return nil, errors.Wrap(err, "Failed to send payment")
 	}
-
 	defer resp.Body.Close()
-	respBody, err := ioutil.ReadAll(resp.Body)
+
+	resEnvelope, err := ParseSOAPEnvelopeResponse(resp.Body)
 	if err != nil {
-		panic(err)
+		return nil, errors.Wrap(err, "Failed parse response")
 	}
 
-	return parseResponseFromWsseResponse(respBody)
+	odpoved := resEnvelope.Body.Odpoved
+	if odpoved.Chyba != nil {
+		return nil, odpoved.Chyba
+	}
+
+	response := Response{
+		DatPrij: odpoved.Hlavicka.DatPrij,
+		Fik:     odpoved.Potvrzeni.Fik,
+		Bkp:     odpoved.Hlavicka.Bkp,
+		odpoved: odpoved,
+	}
+
+	return &response, nil
 }

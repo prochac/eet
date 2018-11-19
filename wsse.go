@@ -1,32 +1,34 @@
-package wsse
+package goEET
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/xml"
 	"strings"
 
-	"crypto/sha256"
-	"encoding/base64"
+	"github.com/pkg/errors"
 
-	"github.com/prochac/goEET/signing"
 	"github.com/satori/go.uuid"
 )
 
-type SOAPEnvelope struct {
+const XmlHeader = `<?xml version="1.0" encoding="UTF-8"?>`
+
+type SOAPEnvelopeRequest struct {
 	XMLName   xml.Name   `xml:"soap:Envelope"`
 	XmlnsSoap string     `xml:"xmlns:soap,attr"`
 	Header    SOAPHeader `xml:"SOAP-ENV:Header"`
 	Body      SOAPBody   `xml:"soap:Body"`
 }
 
-func NewSOAPEnvelope(content interface{}, signer *signing.Signer) SOAPEnvelope {
-	bodyId := "id-" + strings.ToUpper(hex.EncodeToString(uuid.Must(uuid.NewV4()).Bytes()))
-	certId := "X509-" + strings.ToUpper(hex.EncodeToString(uuid.Must(uuid.NewV4()).Bytes()))
-	sigId := "SIG-" + strings.ToUpper(hex.EncodeToString(uuid.Must(uuid.NewV4()).Bytes()))
-	keyId := "KI-" + strings.ToUpper(hex.EncodeToString(uuid.Must(uuid.NewV4()).Bytes()))
-	secTokenId := "STR-" + strings.ToUpper(hex.EncodeToString(uuid.Must(uuid.NewV4()).Bytes()))
+func NewSOAPEnvelopeRequest(content interface{}, signer *Signer) (SOAPEnvelopeRequest, error) {
+	bodyId := "id-" + strings.ToUpper(hex.EncodeToString(uuid.NewV4().Bytes()))
+	certId := "X509-" + strings.ToUpper(hex.EncodeToString(uuid.NewV4().Bytes()))
+	sigId := "SIG-" + strings.ToUpper(hex.EncodeToString(uuid.NewV4().Bytes()))
+	keyId := "KI-" + strings.ToUpper(hex.EncodeToString(uuid.NewV4().Bytes()))
+	secTokenId := "STR-" + strings.ToUpper(hex.EncodeToString(uuid.NewV4().Bytes()))
 
-	envelope := SOAPEnvelope{
+	envelope := SOAPEnvelopeRequest{
 		XmlnsSoap: NsSoapUrl,
 		Header: SOAPHeader{
 			XmlnsSoapEnv: NsSoapEnvUrl,
@@ -99,16 +101,34 @@ func NewSOAPEnvelope(content interface{}, signer *signing.Signer) SOAPEnvelope {
 	envelope.Header.Security.BinarySecurityToken.Value = signer.Base64Cert()
 
 	// DigestValue
-	body, _ := xml.Marshal(envelope.Body)
+	body, err := xml.Marshal(envelope.Body)
+	if err != nil {
+		return SOAPEnvelopeRequest{}, errors.Wrap(err, "Failed to xml.Marshal Body")
+	}
 	bodySum := sha256.Sum256(body)
 	envelope.Header.Security.Signature.SignedInfo.Reference.DigestValue.Value = base64.StdEncoding.EncodeToString(bodySum[:])
 
 	// SignatureValue
-	signedInfo, _ := xml.Marshal(envelope.Header.Security.Signature.SignedInfo)
-	signedSignedInfo, _ := signer.Sign([]byte(signedInfo))
+	signedInfo, err := xml.Marshal(envelope.Header.Security.Signature.SignedInfo)
+	if err != nil {
+		return SOAPEnvelopeRequest{}, errors.Wrap(err, "Failed to xml.Marshal Header.Security.Signature.SignedInfo")
+	}
+	signedSignedInfo, err := signer.Sign(signedInfo)
+	if err != nil {
+		return SOAPEnvelopeRequest{}, errors.Wrap(err, "Failed to Sign xml.Marshaled Header.Security.Signature.SignedInfo")
+	}
 	envelope.Header.Security.Signature.SignatureValue.Value = base64.StdEncoding.EncodeToString(signedSignedInfo)
 
-	return envelope
+	return envelope, nil
+}
+
+func (req SOAPEnvelopeRequest) Marshal() ([]byte, error) {
+	b, err := xml.Marshal(req)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to xml.Marshal SOAPEnvelopeRequest")
+	}
+
+	return []byte(XmlHeader + string(b)), nil
 }
 
 type SOAPHeader struct {

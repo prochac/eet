@@ -1,17 +1,15 @@
-package trzba
+package goEET
 
 import (
 	"crypto/sha1"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/xml"
 	"fmt"
 	"regexp"
 	"time"
 
-	"encoding/base64"
-
 	"github.com/pkg/errors"
-	"github.com/prochac/goEET/signing"
 )
 
 type String20 string
@@ -178,15 +176,21 @@ type Pkp struct {
 	Value    string          `xml:",chardata"`
 }
 
-func NewPkp(t Trzba, signer *signing.Signer) Pkp {
+func NewPkp(t Trzba, signer *Signer) (Pkp, error) {
 	pkpStr := fmt.Sprintf("%s|%s|%s|%s|%s|%s", t.Data.DicPopl, t.Data.IdProvoz, t.Data.IdPokl, t.Data.PoradCis, t.Data.DatTrzby, t.Data.CelkTrzba)
-	pkp, _ := signer.Sign([]byte(pkpStr))
-	return Pkp{
+	pkpValue, err := signer.Sign([]byte(pkpStr))
+	if err != nil {
+		return Pkp{}, errors.Wrap(err, "Failed to sign pkp string")
+	}
+
+	pkp := Pkp{
 		Cipher:   PkpCipherTypeRSA2048,
 		Digest:   PkpDigestTypeSHA256,
 		Encoding: PkpEncodingTypeBase64,
-		Value:    base64.StdEncoding.EncodeToString(pkp),
+		Value:    base64.StdEncoding.EncodeToString(pkpValue),
 	}
+
+	return pkp, nil
 }
 
 type Bkp struct {
@@ -196,14 +200,20 @@ type Bkp struct {
 	Value    string          `xml:",chardata"`
 }
 
-func NewBkp(pkp Pkp) Bkp {
-	pkpValue, _ := base64.StdEncoding.DecodeString(pkp.Value)
+func NewBkp(pkp Pkp) (Bkp, error) {
+	pkpValue, err := base64.StdEncoding.DecodeString(pkp.Value)
+	if err != nil {
+		return Bkp{}, errors.Wrap(err, "Failed to decode PKP value")
+	}
 	sumBkp := sha1.Sum(pkpValue)
 	encodedBkp := hex.EncodeToString(sumBkp[:])
 	finalBkp := fmt.Sprintf("%s-%s-%s-%s-%s", encodedBkp[0:8], encodedBkp[8:16], encodedBkp[16:24], encodedBkp[24:32], encodedBkp[32:40])
-	return Bkp{
+
+	bkp := Bkp{
 		Digest:   BkpDigestTypeSHA1,
 		Encoding: BkpEncodingTypeBase16,
 		Value:    finalBkp,
 	}
+
+	return bkp, nil
 }
