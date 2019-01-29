@@ -1,4 +1,4 @@
-package goEET
+package eet
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 )
 
 func TestDispatcher_SendPayment(t *testing.T) {
-	d, err := NewDispatcher(PlaygroundService, "cert_test/EET_CA1_Playground-CZ00000019.p12", "eet")
+	d, err := NewDispatcher(PlaygroundService, "testdata/EET_CA1_Playground-CZ00000019.p12", "eet")
 	if err != nil {
 		t.Fatal(err)
 	}

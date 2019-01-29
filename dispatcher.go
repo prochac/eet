@@ -1,4 +1,4 @@
-package goEET
+package eet
 
 import (
 	"bytes"

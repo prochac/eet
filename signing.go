@@ -1,4 +1,4 @@
-package goEET
+package eet
 
 import (
 	"crypto"
@@ -10,7 +10,7 @@ import (
 	"io/ioutil"
 
 	"github.com/pkg/errors"
-	"github.com/prochac/crypto/pkcs12"
+	"golang.org/x/crypto/pkcs12"
 )
 
 type Signer struct {

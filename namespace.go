@@ -1,4 +1,4 @@
-package goEET
+package eet
 
 const (
 	NsSoapUrl    = "http://schemas.xmlsoap.org/soap/envelope/"
