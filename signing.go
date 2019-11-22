@@ -7,15 +7,35 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"errors"
+	"fmt"
 	"io/ioutil"
 
-	"github.com/pkg/errors"
 	"golang.org/x/crypto/pkcs12"
 )
 
 type Signer struct {
 	cert *x509.Certificate
 	key  *rsa.PrivateKey
+}
+
+func NewSigner(certPath string, password string) (*Signer, error) {
+	pfxData, err := ioutil.ReadFile(certPath)
+	if err != nil {
+		return nil, fmt.Errorf("reading file %s: %w", certPath, err)
+	}
+
+	privateKey, certificate, _, err := decodeAll(pfxData, password)
+	if err != nil {
+		return nil, fmt.Errorf("decoding private key and certificates: %w", err)
+	}
+
+	s := Signer{
+		key:  privateKey,
+		cert: certificate,
+	}
+
+	return &s, nil
 }
 
 func (s *Signer) Base64Cert() string {
@@ -29,95 +49,43 @@ func (s *Signer) Sign(data []byte) ([]byte, error) {
 	return rsa.SignPKCS1v15(rand.Reader, s.key, crypto.SHA256, hashed[:])
 }
 
-//func (s *Signer) LoadCertificate(certPath string) error {
-//	pemBytes, err := ioutil.ReadFile(certPath)
-//	if err != nil {
-//		return errors.Wrapf(err, "Failed to read file %s", certPath)
-//	}
-//
-//	block, _ := pem.Decode(pemBytes)
-//	if block == nil {
-//		return errors.New("No certificate found: decoded block is empty")
-//	}
-//
-//	var certificate *x509.Certificate
-//	switch block.Type {
-//	case "CERTIFICATE":
-//		certificate, err = x509.ParseCertificate(block.Bytes)
-//		if err != nil {
-//			return errors.Wrap(err, "Failed to parse certificate")
-//		}
-//	default:
-//		return fmt.Errorf("ssl: unsupported key type %q", block.Type)
-//	}
-//	s.cert = certificate
-//
-//	return nil
-//}
-//
-//func (s *Signer) LoadPrivateKey(keyPath string) (err error) {
-//	pemBytes, err := ioutil.ReadFile(keyPath)
-//	if err != nil {
-//		return errors.Wrapf(err, "Failed to read file %s", keyPath)
-//	}
-//
-//	block, _ := pem.Decode(pemBytes)
-//	if block == nil {
-//		return errors.New("No private key found: decoded block is empty")
-//	}
-//
-//	var privateKey *rsa.PrivateKey
-//	switch block.Type {
-//	case "RSA PRIVATE KEY":
-//		privateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
-//		if err != nil {
-//			return errors.Wrap(err, "Failed to parse private key")
-//		}
-//	default:
-//		return fmt.Errorf("ssl: unsupported key type %q", block.Type)
-//	}
-//	s.key = privateKey
-//
-//	return nil
-//}
-
-func NewSigner(certPath string, password string) (*Signer, error) {
-	pfxData, err := ioutil.ReadFile(certPath)
+// decodeAll extracts all certificate and private keys from pfxData.
+func decodeAll(pfxData []byte, password string) (privateKey *rsa.PrivateKey, certificate *x509.Certificate, caCert *x509.Certificate, err error) {
+	blocks, err := pkcs12.ToPEM(pfxData, password)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Failed to read file %s", certPath)
+		return nil, nil, nil, err
 	}
+	for _, block := range blocks {
+		switch block.Type {
+		case "PRIVATE KEY":
+			if privateKey != nil {
+				return nil, &x509.Certificate{}, &x509.Certificate{}, errors.New("only one private key expected")
+			}
 
-	privateKeys, certificates, err := pkcs12.DecodeAll(pfxData, password)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to decode private keys and certificates from pfxData")
-	}
-
-	var privateKey *rsa.PrivateKey
-	for _, rawKey := range privateKeys {
-		if key, ok := rawKey.(*rsa.PrivateKey); ok {
-			privateKey = key
-			break
+			privateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+		case "CERTIFICATE":
+			certs, err := x509.ParseCertificates(block.Bytes)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			for _, cert := range certs {
+				if cert.IsCA {
+					if caCert != nil {
+						return nil, &x509.Certificate{}, &x509.Certificate{}, errors.New("only one CA certificate expected")
+					}
+					caCert = cert
+					continue
+				}
+				if certificate != nil {
+					return nil, &x509.Certificate{}, &x509.Certificate{}, errors.New("only one certificate expected")
+				}
+				certificate = cert
+			}
 		}
 	}
-	if privateKey == nil {
-		return nil, errors.New("can't load private key")
-	}
 
-	var certificate *x509.Certificate
-	for _, cert := range certificates {
-		if !cert.IsCA {
-			certificate = cert
-			break
-		}
-	}
-	if certificate == nil {
-		return nil, errors.New("can't load certificate")
-	}
-
-	s := Signer{
-		key:  privateKey,
-		cert: certificate,
-	}
-
-	return &s, nil
+	return privateKey, certificate, caCert, nil
 }

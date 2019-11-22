@@ -18,15 +18,15 @@ import (
 	"log"
 	"time"
 	
-	"github.com/prochac/goEET"
+	"github.com/prochac/eet"
 )
 
 func main(){
-    d, _ := goEET.NewDispatcher(goEET.PlaygroundService,
-		"cert_test/EET_CA1_Playground-CZ00000019.key",
-		"cert_test/EET_CA1_Playground-CZ00000019.pem",
-		"")
-    r := goEET.Receipt{
+    d, _ := eet.NewDispatcher(eet.PlaygroundService,
+		"EET_CA1_Playground-CZ00000019.p12",
+		"eet",
+    )
+    r := eet.Receipt{
 		UuidZpravy: "49ee3022-de4e-447c-b07f-a550b2378410",
 		DicPopl:    "CZ00000019",
 		IdProvoz:   273,
@@ -34,7 +34,7 @@ func main(){
 		PoradCis:   "0/6460/ZQ42",
 		DatTrzby:   time.Now(),
 		CelkTrzba:  0,
-		Rezim:      goEET.RegularRegime,
+		Rezim:      eet.RegularRegime,
     }
     response, err := d.SendPayment(r)
     if err != nil {

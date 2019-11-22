@@ -7,9 +7,8 @@ import (
 	"encoding/xml"
 	"strings"
 
+	"github.com/gofrs/uuid"
 	"github.com/pkg/errors"
-
-	"github.com/satori/go.uuid"
 )
 
 const XmlHeader = `<?xml version="1.0" encoding="UTF-8"?>`
@@ -22,11 +21,11 @@ type SOAPEnvelopeRequest struct {
 }
 
 func NewSOAPEnvelopeRequest(content interface{}, signer *Signer) (SOAPEnvelopeRequest, error) {
-	bodyId := "id-" + strings.ToUpper(hex.EncodeToString(uuid.NewV4().Bytes()))
-	certId := "X509-" + strings.ToUpper(hex.EncodeToString(uuid.NewV4().Bytes()))
-	sigId := "SIG-" + strings.ToUpper(hex.EncodeToString(uuid.NewV4().Bytes()))
-	keyId := "KI-" + strings.ToUpper(hex.EncodeToString(uuid.NewV4().Bytes()))
-	secTokenId := "STR-" + strings.ToUpper(hex.EncodeToString(uuid.NewV4().Bytes()))
+	bodyId := "id-" + strings.ToUpper(hex.EncodeToString(uuid.Must(uuid.NewV4()).Bytes()))
+	certId := "X509-" + strings.ToUpper(hex.EncodeToString(uuid.Must(uuid.NewV4()).Bytes()))
+	sigId := "SIG-" + strings.ToUpper(hex.EncodeToString(uuid.Must(uuid.NewV4()).Bytes()))
+	keyId := "KI-" + strings.ToUpper(hex.EncodeToString(uuid.Must(uuid.NewV4()).Bytes()))
+	secTokenId := "STR-" + strings.ToUpper(hex.EncodeToString(uuid.Must(uuid.NewV4()).Bytes()))
 
 	envelope := SOAPEnvelopeRequest{
 		XmlnsSoap: NsSoapUrl,

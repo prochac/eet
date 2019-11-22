@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/satori/go.uuid"
+	"github.com/gofrs/uuid"
 )
 
 func TestDispatcher_SendPayment(t *testing.T) {
@@ -15,7 +15,7 @@ func TestDispatcher_SendPayment(t *testing.T) {
 	}
 
 	r := Receipt{
-		UuidZpravy: uuid.NewV4().String(),
+		UuidZpravy: uuid.Must(uuid.NewV4()).String(),
 		DicPopl:    "CZ00000019",
 		IdProvoz:   273,
 		IdPokl:     "/5546/RO24",
