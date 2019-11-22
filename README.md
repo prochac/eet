@@ -1,11 +1,11 @@
-# goEET
+# Go EET Client
 
-Go EET Client
+Implementation of EET client in Go
 
 ## Installation
 
 ```sh
-$ go get github/prochac/goEET
+$ go get github/prochac/eet
 ```
 
 ## Example
