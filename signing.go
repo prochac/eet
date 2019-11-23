@@ -50,37 +50,42 @@ func (s *Signer) Sign(data []byte) ([]byte, error) {
 }
 
 // decodeAll extracts all certificate and private keys from pfxData.
-func decodeAll(pfxData []byte, password string) (privateKey *rsa.PrivateKey, certificate *x509.Certificate, caCert *x509.Certificate, err error) {
+func decodeAll(pfxData []byte, password string) (*rsa.PrivateKey, *x509.Certificate, *x509.Certificate, error) {
+	var (
+		privateKey  *rsa.PrivateKey
+		certificate *x509.Certificate
+		caCert      *x509.Certificate
+	)
 	blocks, err := pkcs12.ToPEM(pfxData, password)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, fmt.Errorf("converting binary pfx data to PEM: %w", err)
 	}
 	for _, block := range blocks {
 		switch block.Type {
 		case "PRIVATE KEY":
 			if privateKey != nil {
-				return nil, &x509.Certificate{}, &x509.Certificate{}, errors.New("only one private key expected")
+				return nil, nil, nil, errors.New("only one private key expected")
 			}
 
 			privateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
 			if err != nil {
-				return nil, nil, nil, err
+				return nil, nil, nil, fmt.Errorf("parsing private key: %w", err)
 			}
 		case "CERTIFICATE":
 			certs, err := x509.ParseCertificates(block.Bytes)
 			if err != nil {
-				return nil, nil, nil, err
+				return nil, nil, nil, fmt.Errorf("parsing cetrtificates: %w", err)
 			}
 			for _, cert := range certs {
 				if cert.IsCA {
 					if caCert != nil {
-						return nil, &x509.Certificate{}, &x509.Certificate{}, errors.New("only one CA certificate expected")
+						return nil, nil, nil, errors.New("only one CA certificate expected")
 					}
 					caCert = cert
 					continue
 				}
 				if certificate != nil {
-					return nil, &x509.Certificate{}, &x509.Certificate{}, errors.New("only one certificate expected")
+					return nil, nil, nil, errors.New("only one certificate expected")
 				}
 				certificate = cert
 			}

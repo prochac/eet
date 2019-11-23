@@ -11,8 +11,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const XmlHeader = `<?xml version="1.0" encoding="UTF-8"?>`
-
 type SOAPEnvelopeRequest struct {
 	XMLName   xml.Name   `xml:"soap:Envelope"`
 	XmlnsSoap string     `xml:"xmlns:soap,attr"`
@@ -119,15 +117,6 @@ func NewSOAPEnvelopeRequest(content interface{}, signer *Signer) (SOAPEnvelopeRe
 	envelope.Header.Security.Signature.SignatureValue.Value = base64.StdEncoding.EncodeToString(signedSignedInfo)
 
 	return envelope, nil
-}
-
-func (req SOAPEnvelopeRequest) Marshal() ([]byte, error) {
-	b, err := xml.Marshal(req)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to xml.Marshal SOAPEnvelopeRequest")
-	}
-
-	return []byte(XmlHeader + string(b)), nil
 }
 
 type SOAPHeader struct {

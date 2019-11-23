@@ -3,11 +3,7 @@ package eet
 import (
 	"encoding/xml"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 type SOAPEnvelopeResponse struct {
@@ -16,19 +12,6 @@ type SOAPEnvelopeResponse struct {
 		XMLName xml.Name `xml:"Body"`
 		Odpoved Odpoved
 	}
-}
-
-func ParseSOAPEnvelopeResponse(r io.Reader) (resp SOAPEnvelopeResponse, err error) {
-	b, err := ioutil.ReadAll(r)
-	if err != nil {
-		return SOAPEnvelopeResponse{}, errors.Wrap(err, "Failed to read all data from reader")
-	}
-
-	if err := xml.Unmarshal(b, &resp); err != nil {
-		return SOAPEnvelopeResponse{}, errors.Wrap(err, "Failed to xml.Unmarshal SOAPEnvelopeResponse")
-	}
-
-	return resp, nil
 }
 
 type Odpoved struct {

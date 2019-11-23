@@ -3,7 +3,9 @@ package eet
 import (
 	"bytes"
 	"crypto/x509"
+	"encoding/xml"
 	"net/http"
+	"time"
 
 	"github.com/pkg/errors"
 )
@@ -14,10 +16,6 @@ const (
 	PlaygroundService Service = "https://pg.eet.cz:443/eet/services/EETServiceSOAP/v3"
 	ProductionService Service = "https://prod.eet.cz:443/eet/services/EETServiceSOAP/v3"
 )
-
-func (s Service) ToString() string {
-	return string(s)
-}
 
 type Regime int
 
@@ -33,10 +31,10 @@ type Dispatcher struct {
 	testing     bool
 }
 
-func NewDispatcher(service Service, certPath, password string) (eet *Dispatcher, err error) {
+func NewDispatcher(service Service, certPath, password string) (*Dispatcher, error) {
 	signer, err := NewSigner(certPath, password)
 	if err != nil {
-		return &Dispatcher{}, errors.Wrap(err, "Failed to create signer")
+		return nil, errors.Wrap(err, "Failed to create signer")
 	}
 
 	d := Dispatcher{
@@ -47,7 +45,7 @@ func NewDispatcher(service Service, certPath, password string) (eet *Dispatcher,
 	return &d, nil
 }
 
-func (d *Dispatcher) SendPayment(receipt Receipt) (r *Response, err error) {
+func (d *Dispatcher) SendPayment(receipt Receipt) (*Response, error) {
 	trzba, err := receipt.Trzba(d.signer)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to convert Receipt to Trzba")
@@ -58,21 +56,26 @@ func (d *Dispatcher) SendPayment(receipt Receipt) (r *Response, err error) {
 		return nil, errors.Wrap(err, "Failed to create SOAPEnvelopeRequest")
 	}
 
-	b, err := envelope.Marshal()
-	if err != nil {
+	var buf bytes.Buffer
+	buf.WriteString(xml.Header)
+	if err := xml.NewEncoder(&buf).Encode(envelope); err != nil {
 		return nil, errors.Wrap(err, "Failed to marshal SOAPEnvelopeRequest")
 	}
 
-	buf := bytes.NewBuffer(b)
-	resp, err := http.Post(d.service.ToString(), "application/xml", buf)
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Post(string(d.service), "application/xml", &buf)
+	if resp != nil {
+		defer func() {
+			_ = resp.Body.Close()
+		}()
+	}
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to send payment")
 	}
-	defer resp.Body.Close()
 
-	resEnvelope, err := ParseSOAPEnvelopeResponse(resp.Body)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed parse response")
+	var resEnvelope SOAPEnvelopeResponse
+	if err := xml.NewDecoder(resp.Body).Decode(&resEnvelope); err != nil {
+		return nil, errors.Wrap(err, "Failed to xml.Unmarshal SOAPEnvelopeResponse")
 	}
 
 	odpoved := resEnvelope.Body.Odpoved

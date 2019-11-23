@@ -1,7 +1,6 @@
 package eet
 
 import (
-	"log"
 	"time"
 )
 
@@ -12,10 +11,10 @@ type Response struct {
 	Bkp     string
 }
 
-func (r Response) Warnings() (warnings []string) {
-	for _, v := range r.odpoved.Varovani {
-		log.Println(v)
-		warnings = append(warnings, v.Varovani)
+func (r Response) Warnings() []string {
+	warnings := make([]string, len(r.odpoved.Varovani))
+	for i, v := range r.odpoved.Varovani {
+		warnings[i] = v.Varovani
 	}
 	return warnings
 }

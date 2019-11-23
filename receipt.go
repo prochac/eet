@@ -32,7 +32,9 @@ type Receipt struct {
 	Rezim           Regime
 }
 
-func (r Receipt) Trzba(signer *Signer) (t Trzba, err error) {
+func (r Receipt) Trzba(signer *Signer) (Trzba, error) {
+	var t Trzba
+	var err error
 	// Hlavicka
 	t.Hlavicka.DatOdesl = NewDateTimeType(time.Now())
 	t.Hlavicka.UuidZpravy, err = NewUUIDType(r.UuidZpravy)
